@@ -149,7 +149,12 @@ uint8_t teapotPacket[14] = { '$', 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0x00, 0x00, '\r'
 #define s2 9
 #define s3 10
 
-
+bool SENSOR1_FLAG = false;
+bool SENSOR2_FLAG = false;
+bool SENSOR3_FLAG = false;
+bool SENSOR4_FLAG = false;
+bool SENSOR5_FLAG = false;
+bool SENSOR6_FLAG = false;
 // ================================================================
 // ===               INTERRUPT DETECTION ROUTINE                ===
 // ================================================================
@@ -158,17 +163,75 @@ volatile bool mpuInterrupt = false;     // indicates whether MPU interrupt pin h
 void dmpDataReady() {
   mpuInterrupt = true;
 }
-
-
-
 // ================================================================
-// ===                      INITIAL SETUP                       ===
+// ===                 SENSORS_FLAG_SET                         ===
 // ================================================================
+
+void SENSORS_FLAG_SET(int i){
+  switch(i){
+     case 1:
+    SENSOR1_FLAG=true;break;
+     case 2:
+    SENSOR2_FLAG=true;break;
+     case 3:
+    SENSOR3_FLAG=true;break;
+     case 4:
+    SENSOR4_FLAG=true;break;
+     case 5:
+    SENSOR5_FLAG=true;break;
+     case 6:
+    SENSOR6_FLAG=true;break;
+  }
+}
+// ================================================================
+// ===                 SENSORS_FLAG_SET                         ===
+// ================================================================
+
+int SENSORS_FLAG_GET(int i){
+  switch(i){
+     case 1:
+    if(SENSOR1_FLAG)return 1;
+    else return 0;
+    break;
+    
+     case 2:
+    if(SENSOR2_FLAG)return 1;
+    else return 0;
+    break;
+    
+     case 3:
+    if(SENSOR3_FLAG)return 1;
+    else return 0;
+    break;
+    
+     case 4:
+    if(SENSOR4_FLAG)return 1;
+    else return 0;
+    break;
+    
+     case 5:
+    if(SENSOR5_FLAG)return 1;
+    else return 0;
+    break;
+     case 6:
+    if(SENSOR6_FLAG)return 1;
+    else return 0;
+    break;
+  }
+}
+// ================================================================
+// ===                      MPU_SELECT                          ===
+// ================================================================
+
 void MPU_SELECT(int x) {
 
   for (int i = 0; i < 3; i++)
     digitalWrite(i + 8, (((x - 1) >> i) & 1));
 }
+
+// ================================================================
+// ===                      INITIAL SETUP                       ===
+// ================================================================
 void setup() {
   pinMode(s1, OUTPUT);
   pinMode(s2, OUTPUT);
@@ -213,6 +276,7 @@ void setup() {
       // get expected DMP packet size for later comparison
       packetSize = mpu.dmpGetFIFOPacketSize();
       Serial.println(">> " + (String)(i) + " done..........");
+      SENSORS_FLAG_SET(i);
     }
     else {
       // ERROR!
@@ -223,7 +287,7 @@ void setup() {
       Serial.print(i);
       Serial.println(F(")"));
     }
-    delay(1000);
+    delay(10);
   }
 }
 
@@ -234,7 +298,9 @@ void setup() {
 // ================================================================
 
 void loop() {
-  MPU_SELECT(2);
+  for (int i = 1; i < 7; i++) {
+  MPU_SELECT(i);
+  
   // if programming failed, don't try to do anything
   if (!dmpReady) return;
   // read a packet from FIFO
@@ -265,17 +331,24 @@ void loop() {
 #endif
 
 #ifdef OUTPUT_READABLE_YAWPITCHROLL
-    // display Euler angles in degrees
+    if(SENSORS_FLAG_GET(i)){
+      // display Euler angles in degrees
     mpu.dmpGetQuaternion(&q, fifoBuffer);
     mpu.dmpGetGravity(&gravity, &q);
     mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
-    Serial.println("ypr\t" + (String)(ypr[0] * 180 / M_PI) + "\t" + (String)(ypr[1] * 180 / M_PI) + "\t" + (String)(ypr[2] * 180 / M_PI));
-    Serial.print("ypr\t");
+    // Serial.println("ypr\t" + (String)(ypr[0] * 180 / M_PI) + "\t" + (String)(ypr[1] * 180 / M_PI) + "\t" + (String)(ypr[2] * 180 / M_PI));
+    Serial.print("S"+(String)i+"\t");
     Serial.print(ypr[0] * 180 / M_PI);
     Serial.print("\t");
     Serial.print(ypr[1] * 180 / M_PI);
     Serial.print("\t");
     Serial.println(ypr[2] * 180 / M_PI);
+    ypr[0]=0;ypr[1]=0;ypr[2]=0;
+    }
+    else{
+       Serial.println("S"+(String)i+" ERROR "+"\t");
+    }
+   
 #endif
 
 #ifdef OUTPUT_READABLE_REALACCEL
@@ -325,5 +398,7 @@ void loop() {
     // blink LED to indicate activity
     blinkState = !blinkState;
     // digitalWrite(LED_PIN, blinkState);
+  }
+  delay(210);
   }
 }
